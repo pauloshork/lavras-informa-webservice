@@ -1,14 +1,12 @@
 <?php
-require_once 'base.php';
-require_once 'config.php';
-
-use Facebook\Facebook;
 
 namespace Connectors;
 
+use Facebook\Facebook;
+
 class FacebookConnector extends DatabaseConnector {
 
-	function __construct() {
+	public function __construct() {
 		$this->fb = new Facebook($config['facebook']);
 	}
 
@@ -39,5 +37,9 @@ class FacebookConnector extends DatabaseConnector {
 			echo '<h3>Long-lived</h3>';
 			var_dump($accessToken->getValue());
 		}
+		
+		// TODO recuperar do banco o usuario que tem o user_id especificado acima
+		// TODO criar conta caso o usuário não seja cadastrado
+		// TODO gerar um token de acesso do nosso sistema para o usuário
 	}
 }
