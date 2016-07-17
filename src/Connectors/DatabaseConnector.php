@@ -26,6 +26,33 @@ class DatabaseConnector {
 			constraint id_admin index key (admin)
 		)';
 
+		'create table if not exists problema (
+			idProblema int not null,
+			data date not null,
+			titulo varchar(45) not null,
+			descricao varchar(45) not null,
+			status enum('Pentende', 'Em Andamento', 'Finalizado') not null,
+			classificacao enum('Infraestrutura', 'Saude', 'Seguranca') not null,
+			foto varchar(45) not null,
+			latitude double not null,
+			longitude double not null,
+			idUsuario int not null,
+			constraint pk_problem primary key (idProblema),
+			constraint fk_idUsuario FOREIGN KEY ( idUsuario ) REFERENCES usuarios( id )
+		)';
+
+		'create table if not exists comentario (
+			idComentario int not null,
+			texto varchar(45) not null,
+			idProblema int not null,
+			idUsuario int not null,
+			constraint pk_comentario primary key (idComentario),
+			constraint fk_idProblema FOREIGN KEY ( idProblema ) 
+						REFERENCES problema( idProblema ),
+			constraint fk_idUsuario FOREIGN KEY ( idUsuario ) 
+						REFERENCES usuarios( id )
+		)';
+
 		'create table if not exists local_oauth (
 			id_usuario int not null,
 			email varchar(255) not null,
