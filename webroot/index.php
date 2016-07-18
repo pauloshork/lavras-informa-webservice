@@ -8,10 +8,11 @@ use Connectors\FacebookConnector;
 // Mapeamento de caminhos e controladores
 $map = [ 
 		'/' => 'home',
+		'/init' => 'init',
 		'/cadastro' => 'cadastro',
 		'/login' => 'login',
 		'/loginFacebook' => 'loginFacebook',
-		'/relatos' => null 
+		'/relatos' => null
 ];
 
 // Leitura do caminho
@@ -30,6 +31,10 @@ call_user_func ( $map [$path], $config );
 function home(array $config) {
 	echo 'o sistema está online';
 }
+function init(array $config) {
+	$storage = new DatabaseConnector($config);
+	$storage->create_database();
+}
 /*
  * Controlador de cadastro.
  */
@@ -38,15 +43,10 @@ function cadastro(array $config) {
 	$senha = 'oi';
 	$nome = 'oi';
 	
-	$oauth = new OAuth();
-	$oauth->token();
-	
 	$storage = new DatabaseConnector ( $config );
-	$auth = new OAuth();
 	if (!$storage->getUser($email)) {
 		$storage->setUser($email, $senha, $nome);
-		
-		
+		login($config);
 	} else {
 		$msg = ['error' => 'Email está em uso.'];
 		echo json_encode($msg);

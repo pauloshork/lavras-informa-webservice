@@ -12,7 +12,9 @@ class OAuth {
 
 	function __construct($storage) {
 		Autoloader::register();
-		$this->server = new Server($storage);
+		$this->server = new Server();
+		$this->server->setConfig('enforce_state', false);
+		$this->server->addStorage($storage);
 		$this->server->addGrantType(new UserCredentials($storage));
 	}
 
@@ -21,9 +23,7 @@ class OAuth {
 	 */
 	function token() {
 		$request = Request::createFromGlobals();
-		$response = new Response();
-		$authorized = $this->server->validateAuthorizeRequest($request);
-		$response = $this->server->handleAuthorizeRequest($request, $response, $authorized);
+		$response = $this->server->handleTokenRequest($request);
 		$response->send();
 	}
 
@@ -36,16 +36,8 @@ class OAuth {
 		if (!$this->server->verifyResourceRequest($request)) {
 			$server->getResponse()->send();
 		} else {
+			// TODO processar parametros para selecionar recursos
 			echo json_encode(array('success' => true, 'message' => 'You accessed my APIs!'));
 		}
-	}
-	
-	/*
-	 * Permite que usuários façam logout do sistema.
-	 */
-	function revoke() {
-		$request = Request::createFromGlobals();
-		$response = $this->server->handleRevokeRequest($request);
-		$response->send();
 	}
 }

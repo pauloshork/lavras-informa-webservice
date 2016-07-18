@@ -18,7 +18,7 @@ $config = [
 				'option' => null 
 		],
 		'mobile_app' => [
-				'app_id' => 'id do aplicativo',
-				'app_secret' => 'segredo do aplicativo'
+				'app_id' => 'id_do_aplicativo',
+				'app_secret' => 'segredo_do_aplicativo'
 		]
 ];
