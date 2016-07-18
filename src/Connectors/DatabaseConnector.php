@@ -60,7 +60,7 @@ class DatabaseConnector implements AccessTokenInterface, UserCredentialsInterfac
 		}
 		
 		return $stmt->execute ( compact ( 'access_token', 'client_id', 'user_id', 'expires', 'scope' ) );
-	}
+
 	/* UserCredentials Interface */
 	public function checkUserCredentials($username, $password) {
 		if ($user = $this->getUser ( $username )) {
@@ -145,51 +145,73 @@ class DatabaseConnector implements AccessTokenInterface, UserCredentialsInterfac
 		return false;
 	}
 	function create_database() {
-		/*
-		 * 'create table if not exists usuarios (
-		 * id int not null auto_increment,
-		 * admin tinyint not null default 0,
-		 * constraint pk_usuarios primary key (id),
-		 * constraint id_admin index key (admin)
-		 * )';
-		 *
-		 * 'create table if not exists local_oauth (
-		 * id_usuario int not null,
-		 * email varchar(255) not null,
-		 * senha varchar(255) not null,
-		 * nome varchar(255) not null,
-		 * constraint pk_local_oauth primary key (id_usuario),
-		 * constraint fk_local_oauth_id_usuario (id_usuario)
-		 * references usuarios(id) on delete cascade on update cascade,
-		 * constraint uk_email unique key (email),
-		 * )'
-		 *
-		 * 'create table if not exists facebook_oauth (
-		 * id_usuario int not null,
-		 * userid varchar(255) not null,
-		 * constraint pk_facebook_oauth primary key (id_usuario),
-		 * constraint fk_facebook_oauth_id_usuario (id_usuario)
-		 * references usuarios(id) on delete cascade on update cascade,
-		 * constraint id_userid unique key (userid)
-		 * )'
-		 *
-		 * 'create table if not exists login_sessions (
-		 * token varchar(255) not null,
-		 * id_usuario int not null,
-		 * expira varchar(50) not null,
-		 * constraint pk_login_sessions primary key (token),
-		 * constraint fk_login_sessions_id_usuario (id_usuario) references usuarios(id)
-		 * )'
-		 * }
-		 *
-		 * protected function getUsuarioByEmail($email) {
-		 * $sql = 'select * from usuarios as u right join local_oauth as d on d.id_usuario = u.id where email = ?';
-		 * $stmt = $this->db->prepare($sql);
-		 *
-		 * }
-		 *
-		 * protected functionn getUsuarioByUserId($userId) {
-		 * ''
-		 */
+		$sql = 
+		'CREATE TABLE IF NOT EXISTS ' . $this->config['user_table'] . ' (
+			id int NOT NULL AUTO_INCREMENT,
+			admin tinyint NOT NULL DEFAULT 0,
+			CONSTRAINT pk_usuarios PRIMARY KEY (id),
+			CONSTRAINT ik_admin index key (admin)
+		);
+
+		CREATE TABLE IF NOT EXISTS ' . $this->config['user_data'] . ' (
+			id_usuario int NOT NULL,
+			email varchar(255) NOT NULL,
+			senha varchar(255) NOT NULL,
+			nome varchar(255) NOT NULL,
+			CONSTRAINT pk_' . $this->config['user_data'] . ' PRIMARY KEY (id_usuario),
+			CONSTRAINT fk_' . $this->config['user_data'] . '_id_usuario (id_usuario)
+				REFERENCES ' . $this->config['user_table'] . '(id) ON DELETE CASCADE ON UPDATE CASCADE,
+			CONSTRAINT uk_email UNIQUE KEY (email),
+		);
+
+		CREATE TABLE IF NOT EXISTS facebook_oauth (
+			id_usuario int NOT NULL,
+			user_id varchar(255) NOT NULL,
+			CONSTRAINT pk_facebook_oauth PRIMARY KEY (id_usuario),
+			CONSTRAINT fk_' . $this->config['user_table'] . '_id_usuario (id_usuario)
+				REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE,
+			CONSTRAINT uk_user_id UNIQUE KEY (user_id)
+		);
+
+		CREATE TABLE IF NOT EXISTS ' . $this->config['access_token_table'] . ' (
+			token varchar(255) NOT NULL,
+			id_usuario int NOT NULL,
+			expira varchar(50) NOT NULL,
+			CONSTRAINT pk_' . $this->config['access_token_table'] . ' PRIMARY KEY (token),
+			CONSTRAINT ik_usuario INDEX KEY (id_usuario),
+			CONSTRAINT fk_' . $this->config['user_table'] . '_id_usuario (id_usuario)
+				REFERENCES ' . $this->config['user_table'] . '(id) ON DELETE CASCADE ON UPDATE CASCADE
+		);
+
+		CREATE TABLE IF NOT EXISTS problemas (
+			id int NOT NULL,
+			data date NOT NULL,
+			titulo varchar(50) NOT NULL,
+			descricao varchar(1024) NOT NULL,
+			status enum('Pentende', 'Em Andamento', 'Finalizado') NOT NULL,
+			classificacao enum('Infraestrutura', 'Saude', 'Seguranca') NOT NULL,
+			foto varchar(1024) NOT NULL,
+			latitude double NOT NULL,
+			longitude double NOT NULL,
+			id_usuario int NOT NULL,
+			CONSTRAINT pk_problema PRIMARY KEY (id),
+			CONSTRAINT ik_usuario INDEX KEY (id_usuario),
+			CONSTRAINT fk_' . $this->config['user_table'] . '_id_usuario FOREIGN KEY (id_usuario)
+				REFERENCES ' . $this->config['user_table'] . '(id) ON DELETE CASCADE ON UPDATE CASCADE
+		);
+
+		CREATE TABLE IF NOT EXISTS comentarios (
+			id int NOT NULL,
+			texto varchar(1024) NOT NULL,
+			id_problema int NOT NULL,
+			id_usuario int NOT NULL,
+			CONSTRAINT pk_comentario PRIMARY KEY (id),
+			CONSTRAINT ik_problema INDEX KEY (id_problema),
+			CONSTRAINT fk_problemas_id_problema FOREIGN KEY (id_problema) 
+				REFERENCES problemas(id),
+			CONSTRAINT fk_' . $this->client['user_table'] . '_id_usuario FOREIGN KEY (id_usuario) 
+				REFERENCES ' . $this->client['user_table'] . 'usuarios(id)
+		)';
+		return $sql;
 	}
 }
