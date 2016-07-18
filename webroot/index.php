@@ -39,14 +39,14 @@ function init(array $config) {
  * Controlador de cadastro.
  */
 function cadastro(array $config) {
-	$email = 'oi';
-	$senha = 'oi';
-	$nome = 'oi';
+	$json = json_decode(file_get_contents('php://input'));
+	$email = $json['email'];
+	$senha = $json['senha'];
+	$nome = $json['nome'];
 	
 	$storage = new DatabaseConnector ( $config );
 	if (!$storage->getUser($email)) {
 		$storage->setUser($email, $senha, $nome);
-		login($config);
 	} else {
 		$msg = ['error' => 'Email está em uso.'];
 		echo json_encode($msg);
@@ -56,33 +56,15 @@ function cadastro(array $config) {
  * Controlador de login.
  */
 function login(array $config) {
-	$email = 'oi';
-	$senha = 'oi';
-	
 	$storage = new DatabaseConnector ( $config );
 	$auth = new OAuth($storage);
 	
 	$auth->token();
-	/*try {
-		$token = $dbc->autenticar ( $email, $senha );
-		$msg = [ 
-				'token' => $token 
-		];
-	} catch ( Exception $e ) {
-		$msg = [ 
-				'error' => $e->getMessage () 
-		];
-	}
-	
-	echo json_encode ( $msg );*/
 }
 /*
  * Controlador de login pelo facebook.
  */
 function loginFacebook(array $config) {
-	$user_id = 'oi';
-	$token = 'oi';
-	
 	$storage = new FacebookConnector( $config );
 	$auth = new OAuth($storage);
 	

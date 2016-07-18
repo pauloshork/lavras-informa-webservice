@@ -16,7 +16,8 @@ class DatabaseConnector implements AccessTokenInterface, UserCredentialsInterfac
 				'options' => [ ],
 				'access_token_table' => 'login_sessions',
 				'user_table' => 'usuarios',
-				'user_data' => 'local_oauth' 
+				'user_data' => 'local_oauth',
+				'facebook_data' => 'facebook_oauth'
 		], $config ['database'] );
 		
 		$this->db = new \PDO ( $connection ['dsn'], $connection ['username'], $connection ['password'], $connection ['options'] );
@@ -151,7 +152,7 @@ class DatabaseConnector implements AccessTokenInterface, UserCredentialsInterfac
 					'redirect_uri' => '/index.php/login',
 					'client_id' => $client_id,
 					'grant_types' => [ 
-							'password' 
+							'password'
 					] 
 			];
 		} else {
@@ -208,11 +209,11 @@ class DatabaseConnector implements AccessTokenInterface, UserCredentialsInterfac
 			CONSTRAINT uk_email UNIQUE KEY (email)
 		);
 
-		CREATE TABLE IF NOT EXISTS facebook_oauth (
+		CREATE TABLE IF NOT EXISTS ' . $this->config['facebook_data'] . ' (
 			id_usuario int NOT NULL,
 			user_id varchar(255) NOT NULL,
-			CONSTRAINT pk_facebook_oauth PRIMARY KEY (id_usuario),
-			CONSTRAINT fk_facebook_oauth_' . $this->config ['user_table'] . ' FOREIGN KEY (id_usuario)
+			CONSTRAINT pk_' . $this->config['facebook_data'] . ' PRIMARY KEY (id_usuario),
+			CONSTRAINT fk_' . $this->config['facebook_data'] . '_' . $this->config ['user_table'] . ' FOREIGN KEY (id_usuario)
 				REFERENCES ' . $this->config ['user_table'] . '(id) ON DELETE CASCADE ON UPDATE CASCADE,
 			CONSTRAINT uk_user_id UNIQUE KEY (user_id)
 		);

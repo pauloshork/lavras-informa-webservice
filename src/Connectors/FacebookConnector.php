@@ -10,11 +10,10 @@ class FacebookConnector extends DatabaseConnector {
 	protected $fb;
 	public function __construct(array $config = []) {
 		$config = array_merge ( [ 
-				'user_data' => 'facebook_oauth',
-				'facebook' => []
+				'facebook' => [ ] 
 		], $config );
 		parent::__construct ( $config );
-		$this->config['facebook'] = $config['facebook'];
+		$this->config ['facebook'] = $config ['facebook'];
 		$this->fb = new Facebook ( $config ['facebook'] );
 	}
 	/* UserCredentials Interface */
@@ -25,9 +24,9 @@ class FacebookConnector extends DatabaseConnector {
 			} else {
 				return true;
 			}
+		} else {
+			return false;
 		}
-		
-		return false;
 	}
 	public function getUserDetails($username) {
 		return $this->getUser ( $username );
@@ -70,7 +69,7 @@ class FacebookConnector extends DatabaseConnector {
 	public function getUser($user_id) {
 		$sql = sprintf ( 'SELECT * FROM %s AS t INNER JOIN %s AS d 
 				ON t.id = d.id_usuario 
-				WHERE d.userid=:user_id', $this->config ['user_table'], $this->config ['user_data'] );
+				WHERE d.userid=:user_id', $this->config ['user_table'], $this->config ['facebook_data'] );
 		$stmt = $this->db->prepare ( $sql );
 		$stmt->execute ( compact ( 'user_id' ) );
 		
@@ -90,7 +89,7 @@ class FacebookConnector extends DatabaseConnector {
 				$sql = sprintf ( 'UPDATE %s as t, %s as d INNER JOIN t
 						ON t.id = d.id_usuario
 						SET t.admin=:admin
-						WHERE d.user_id=:user_id', $this->config ['user_table'], $this->config ['user_data'] );
+						WHERE d.user_id=:user_id', $this->config ['user_table'], $this->config ['facebook_data'] );
 				$stmt = $this->db->prepare ( $sql );
 				return $stmt->execute ( compact ( 'user_id', 'admin' ) );
 			} else {
@@ -100,15 +99,17 @@ class FacebookConnector extends DatabaseConnector {
 			$admin = $admin || false;
 			try {
 				$this->db->beginTransaction ();
-				$sql = sprintf ( 'INSERT INTO %s (admin) VALUES (:admin)', $this->config ['user_table'] );
+				$sql = sprintf ( 'INSERT INTO %s (admin) 
+						VALUES (:admin)', $this->config ['user_table'] );
 				$stmt = $this->db->prepare ( $sql );
 				$execute = $stmt->execute ( compact ( 'admin' ) );
 				if (! $execute) {
 					throw new \Exception ( $stmt->errorInfo () );
 				}
-				$sql = sprintf ( 'INSERT INTO %s (id_usuario, email, senha, nome) VALUES (LAST_INSERT_ID(), :email, :senha, :nome)', $this->config ['user_data'] );
+				$sql = sprintf ( 'INSERT INTO %s (id_usuario, user_id) 
+						VALUES (LAST_INSERT_ID(), :user_id)', $this->config ['facebook_data'] );
 				$stmt = $this->db->prepare ( $sql );
-				$execute = $stmt->execute ( compact ( 'email', 'senha', 'nome' ) );
+				$execute = $stmt->execute ( compact ( 'user_id' ) );
 				if (! $execute) {
 					throw new \Exception ( $stmt->errorInfo () );
 				}
