@@ -212,6 +212,7 @@ class DatabaseConnector implements AccessTokenInterface, UserCredentialsInterfac
 		CREATE TABLE IF NOT EXISTS ' . $this->config['facebook_data'] . ' (
 			id_usuario int NOT NULL,
 			fb_user_id varchar(255) NOT NULL,
+                        fb_access_token varchar(255) NOT NULL,
 			CONSTRAINT pk_' . $this->config['facebook_data'] . ' PRIMARY KEY (id_usuario),
 			CONSTRAINT fk_' . $this->config['facebook_data'] . '_' . $this->config ['user_table'] . ' FOREIGN KEY (id_usuario)
 				REFERENCES ' . $this->config ['user_table'] . '(id) ON DELETE CASCADE ON UPDATE CASCADE,
