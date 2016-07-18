@@ -40,13 +40,10 @@ function init(array $config) {
  */
 function cadastro(array $config) {
 	$json = json_decode(file_get_contents('php://input'));
-	$email = $json['email'];
-	$senha = $json['senha'];
-	$nome = $json['nome'];
 	
 	$storage = new DatabaseConnector ( $config );
-	if (!$storage->getUser($email)) {
-		$storage->setUser($email, $senha, $nome);
+	if (!$storage->getUser($json->email)) {
+		$storage->setUser($json->email, $json->senha, $json->nome);
 	} else {
 		$msg = ['error' => 'Email está em uso.'];
 		echo json_encode($msg);

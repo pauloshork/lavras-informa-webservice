@@ -34,34 +34,34 @@ class FacebookConnector extends DatabaseConnector {
 	protected function checkToken($user_id, $token) {
 		$accessToken = new AccessToken ( $token );
 		
-		echo '<h3>Access Token</h3>';
-		var_dump ( $accessToken->getValue () );
+		//echo '<h3>Access Token</h3>';
+		//var_dump ( $accessToken->getValue () );
 		
 		$oac = $this->fb->getOAuth2Client ();
 		$metadata = $oac->debugToken ( $accessToken );
-		echo '<h3>Metadata</h3>';
-		var_dump ( $metadata );
+		//echo '<h3>Metadata</h3>';
+		//var_dump ( $metadata );
 		
 		try {
 			$metadata->validateAppId ( $this->config ['facebook'] ['app_id'] );
 			$metadata->validateUserId ( $user_id );
 			$metadata->validateExpiration ();
 		} catch ( FacebookSDKException $ex ) {
-			echo '<p> Error validating access token: ' . $ex->getMessage () . "</p>\n\n";
+			//echo '<p> Error validating access token: ' . $ex->getMessage () . "</p>\n\n";
 			return false;
 		}
 		
 		if (! $accessToken->isLongLived ()) {
 			// Exchanges a short-lived access token for a long-lived one
 			try {
-				$accessToken = $oAuth2Client->getLongLivedAccessToken ( $accessToken );
+				$accessToken = $oac->getLongLivedAccessToken ( $accessToken );
 			} catch ( FacebookSDKException $e ) {
-				echo '<p>Error getting long-lived access token: ' . $ex->getMessage () . "</p>\n\n";
+				//echo '<p>Error getting long-lived access token: ' . $ex->getMessage () . "</p>\n\n";
 				return false;
 			}
 			
-			echo '<h3>Long-lived</h3>';
-			var_dump ( $accessToken->getValue () );
+			//echo '<h3>Long-lived</h3>';
+			//var_dump ( $accessToken->getValue () );
 		}
 		
 		return true;
@@ -69,7 +69,7 @@ class FacebookConnector extends DatabaseConnector {
 	public function getUser($user_id) {
 		$sql = sprintf ( 'SELECT * FROM %s AS t INNER JOIN %s AS d 
 				ON t.id = d.id_usuario 
-				WHERE d.userid=:user_id', $this->config ['user_table'], $this->config ['facebook_data'] );
+				WHERE d.fb_user_id=:user_id', $this->config ['user_table'], $this->config ['facebook_data'] );
 		$stmt = $this->db->prepare ( $sql );
 		$stmt->execute ( compact ( 'user_id' ) );
 		
@@ -89,7 +89,7 @@ class FacebookConnector extends DatabaseConnector {
 				$sql = sprintf ( 'UPDATE %s as t, %s as d INNER JOIN t
 						ON t.id = d.id_usuario
 						SET t.admin=:admin
-						WHERE d.user_id=:user_id', $this->config ['user_table'], $this->config ['facebook_data'] );
+						WHERE d.fb_user_id=:user_id', $this->config ['user_table'], $this->config ['facebook_data'] );
 				$stmt = $this->db->prepare ( $sql );
 				return $stmt->execute ( compact ( 'user_id', 'admin' ) );
 			} else {
@@ -106,7 +106,7 @@ class FacebookConnector extends DatabaseConnector {
 				if (! $execute) {
 					throw new \Exception ( $stmt->errorInfo () );
 				}
-				$sql = sprintf ( 'INSERT INTO %s (id_usuario, user_id) 
+				$sql = sprintf ( 'INSERT INTO %s (id_usuario, fb_user_id) 
 						VALUES (LAST_INSERT_ID(), :user_id)', $this->config ['facebook_data'] );
 				$stmt = $this->db->prepare ( $sql );
 				$execute = $stmt->execute ( compact ( 'user_id' ) );
