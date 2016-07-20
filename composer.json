@@ -1,8 +1,8 @@
 {
-    "name": "comp-ufla/lavras-informa",
-    "description": "Webservice para o aplicativo Lavras Informa.",
-    "require": {
-        "facebook/php-sdk-v4": "~5.0",
-        "bshaffer/oauth2-server-php": "^1.8"
-    }
+	"name": "comp-ufla/lavras-informa",
+	"description": "Webservice para o aplicativo Lavras Informa.",
+	"require": {
+		"facebook/php-sdk-v4": "~5.0",
+		"bshaffer/oauth2-server-php": "^1.8"
+	}
 }
