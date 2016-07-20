@@ -498,7 +498,6 @@ CREATE TABLE IF NOT EXISTS {$this->config ['user_data']} (
 CREATE TABLE IF NOT EXISTS {$this->config ['facebook_data']} (
 	id_usuario int NOT NULL,
 	fb_user_id varchar(255) NOT NULL,
-	fb_access_token varchar(255) NOT NULL,
 	fb_email varchar(255) NOT NULL,
 	fb_nome varchar(255) NOT NULL,
 	CONSTRAINT pk_{$this->config ['facebook_data']} PRIMARY KEY (id_usuario),
