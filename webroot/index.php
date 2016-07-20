@@ -5,6 +5,7 @@ use Connectors\LocalConnector;
 use Connectors\OAuth;
 use Connectors\FacebookConnector;
 use Connectors\ConnectorException;
+use Models\Usuario;
 
 // Mapeamento de caminhos e controladores
 $map = [
@@ -71,14 +72,38 @@ function init()
  */
 function cadastro()
 {
-    $json = json_decode(file_get_contents('php://input'));
-    
     $storage = new LocalConnector(\Config::$config);
-    if (! $storage->getUser($json->email)) {
-        $storage->setUser($json->email, $json->senha, $json->nome);
-    } else {
-        $e = new ConnectorException('O email fornecido já foi cadastrado');
-        echo $e->toJson();
+
+    $u = new Usuario();
+//     echo $_SERVER['CONTENT_TYPE'];
+    switch ($_SERVER['CONTENT_TYPE']) {
+        case 'application/json':
+            $json = json_decode(file_get_contents('php://input'));
+            $u->setEmail($json->email);
+            $u->setSenha($json->senha);
+            $u->setNome($json->nome);
+            break;
+        case 'application/x-www-form-urlencoded':
+            $u->setEmail($_POST['email']);
+            $u->setSenha($_POST['senha']);
+            $u->setNome($_POST['nome']);
+            break;
+        default:
+            unset($u);
+            echo '{"error":{"message":json ou urlencoded}}';
+    }
+    
+    if (isset($u)) {
+        if (! $storage->getUser($u->getEmail())) {
+            try {
+                $storage->setUser($u);
+            } catch (ConnectorException $e) {
+                echo $e->toJson();
+            }
+        } else {
+            $e = new ConnectorException('O email fornecido já foi cadastrado');
+            echo $e->toJson();
+        }
     }
 }
 

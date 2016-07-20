@@ -30,7 +30,7 @@ class FacebookConnector extends BaseConnector
                 $user = new Usuario();
                 $user->setFbUserId($username);
             }
-            $fb_user = $this->fetchUserData($username);
+            $fb_user = $this->fetchUserData();
             $user->setFbEmail($fb_user->getEmail());
             $user->setFbNome($fb_user->getName());
             
@@ -40,9 +40,10 @@ class FacebookConnector extends BaseConnector
         }
     }
 
-    protected function checkToken($user_id, $token)
+    public function checkToken($user_id, $token)
     {
         $accessToken = new AccessToken($token);
+        $this->fb->setDefaultAccessToken($accessToken);
         
         // echo '<h3>Access Token</h3>';
         // var_dump ( $accessToken->getValue () );
@@ -58,7 +59,7 @@ class FacebookConnector extends BaseConnector
             $metadata->validateExpiration();
         } catch (FacebookSDKException $ex) {
             throw new ConnectorException('FacebookSDKException: ' . $ex->getMessage(), $ex->getCode(), $ex);
-            // echo '<p> Error validating access token: ' . $ex->getMessage () . "</p>\n\n";
+//             echo '<p> Error validating access token: ' . $ex->getMessage () . "</p>\n\n";
             return false;
         }
         
@@ -66,9 +67,10 @@ class FacebookConnector extends BaseConnector
             // Exchanges a short-lived access token for a long-lived one
             try {
                 $accessToken = $oac->getLongLivedAccessToken($accessToken);
+                $this->fb->setDefaultAccessToken($accessToken);
             } catch (FacebookSDKException $ex) {
                 throw new ConnectorException('FacebookSDKException: ' . $ex->getMessage(), $ex->getCode(), $ex);
-                // echo '<p>Error getting long-lived access token: ' . $ex->getMessage () . "</p>\n\n";
+//                 echo '<p>Error getting long-lived access token: ' . $ex->getMessage () . "</p>\n\n";
                 return false;
             }
             
@@ -79,14 +81,14 @@ class FacebookConnector extends BaseConnector
         return true;
     }
 
-    protected function fetchUserData($token)
+    protected function fetchUserData()
     {
         try {
-            $response = $this->fb->get('/me?fields=id,name,email', $token);
+            $response = $this->fb->get('/me?fields=id,name,email');
         } catch (FacebookResponseException $e) {
-            throw new ConnectorException('FacebookResponceException: ' . $e->getMessage(), $e->getCode(), $e);
+            throw new ConnectorException('FacebookResponseException: ' . $e->getMessage(), $e->getCode(), $e);
         } catch (FacebookSDKException $e) {
-            throw new ConnectorException('FacebookSDKException ' . $e->getMessage(), $e->getCode(), $e);
+            throw new ConnectorException('FacebookSDKException: ' . $e->getMessage(), $e->getCode(), $e);
         }
         
         return $response->getGraphUser();

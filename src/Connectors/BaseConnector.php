@@ -13,7 +13,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
 {
 
     const DATE_FORMAT = 'Y-m-d H:i:s';
-    
+
     protected $config;
 
     protected $db;
@@ -33,7 +33,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
         $this->db = new \PDO($connection['dsn'], $connection['username'], $connection['password'], $connection['options']);
         
         // debugging
-        $this->db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        // $this->db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         
         $this->config = array_merge([
             'security' => $config['security'],
@@ -153,7 +153,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
 				WHERE %s=:value', $this->config['user_table'], $this->config['user_data'], $this->config['facebook_data'], $key);
         $stmt = $this->db->prepare($sql);
         if (! $stmt->execute(compact('value'))) {
-            throw new ConnectorException('Falha ao realizar busca de usuários: ' . $stmt->errorInfo());
+            throw ConnectorException::fromStmt($stmt, 'Falha ao realizar busca de usuários');
         }
         if (! $userInfo = $stmt->fetch(\PDO::FETCH_ASSOC)) {
             return null;
@@ -182,96 +182,101 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
      */
     public function setUser(Usuario $usuario)
     {
-        try {
-            $this->db->beginTransaction();
-            if ($usuario->hasLocalOAuth() || $usuario->hasFacebookOAuth()) {
-                if (is_null($usuario->getId())) {
-                    // Caso o usuário não exista
-                    $sql = sprintf('INSERT INTO %s (admin) VALUES (:admin)', $this->config['user_table']);
+        $this->db->beginTransaction();
+        if ($usuario->hasLocalOAuth() || $usuario->hasFacebookOAuth()) {
+            if (is_null($usuario->getId())) {
+                // Caso o usuário não exista
+                $sql = sprintf('INSERT INTO %s (admin) VALUES (:admin)', $this->config['user_table']);
+                $stmt = $this->db->prepare($sql);
+                if (! $stmt->execute($usuario->getUsuariosArray([
+                    'admin'
+                ]))) {
+                    throw ConnectorException::fromStmt($stmt, 'Erro ao inserir usuário na tabela base');
+                }
+                
+                if ($usuario->hasLocalOAuth()) {
+                    $sql = sprintf('INSERT INTO %s (id_usuario, email, senha, nome)
+                            VALUES (LAST_INSERT_ID(), :email, :senha, :nome)', $this->config['user_data']);
                     $stmt = $this->db->prepare($sql);
-                    if (! $stmt->execute($usuario->getUsuariosArray())) {
-                        throw new ConnectorException('Erro ao inserir usuário na tabela base: ' . $stmt->errorInfo());
+                    if (! $stmt->execute($usuario->getLocalOAuthArray([
+                        'email',
+                        'senha',
+                        'nome'
+                    ]))) {
+                        throw ConnectorException::fromStmt($stmt, 'Erro ao inserir usuário na tabela de oauth local');
                     }
-                    
-                    if ($usuario->hasLocalOAuth()) {
-                        $sql = sprintf('INSERT INTO %s (id_usuario, email, senha, nome) VALUES (LAST_INSERT_ID(), :email, :senha, :nome)', $this->config['user_data']);
-                        $stmt = $this->db->prepare($sql);
-                        if (! $stmt->execute($usuario->getLocalOAuthArray())) {
-                            throw new ConnectorException('Erro ao inserir usuário na tabela de oauth local: ' . $stmt->errorInfo());
-                        }
+                }
+                
+                if ($usuario->hasFacebookOAuth()) {
+                    $sql = sprintf('INSERT INTO %s (id_usuario, fb_user_id, fb_email, fb_nome)
+                            VALUES (LAST_INSERT_ID(), :fb_user_id, :fb_email, :fb_nome)', $this->config['facebook_data']);
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($usuario->getFacebookOAuthArray([
+                        'fb_user_id',
+                        'fb_email',
+                        'fb_nome'
+                    ]))) {
+                        throw ConnectorException::fromStmt($stmt, 'Erro ao inserir usuário na tabela de oauth do facebook');
                     }
-                    
-                    if ($usuario->hasFacebookOAuth()) {
-                        $sql = sprintf('INSERT INTO %s (id_usuario, fb_user_id, fb_email, fb_nome) VALUES (LAST_INSERT_ID(), :fb_user_id, :fb_email, :fb_nome)', $this->config['facebook_data']);
-                        $stmt = $this->db->prepare($sql);
-                        if (! $stmt->execute($usuario->getFacebookOAuthArray())) {
-                            throw new ConnectorException('Erro ao inserir usuário na tabela de oauth do facebook: ' . $stmt->errorInfo());
-                        }
-                    }
-                } else {
-                    // Caso o usuário exista
-                    if (! is_null($usuario->isAdmin())) {
-                        $sql = sprintf('UPDATE %s (id, admin)
+                }
+            } else {
+                // Caso o usuário exista
+                if (! is_null($usuario->isAdmin())) {
+                    $sql = sprintf('UPDATE %s
 								SET admin=:admin
 								WHERE id=:id', $this->config['user_table']);
-                        $stmt = $this->db->prepare($sql);
-                        if (! $stmt->execute($usuario->getUsuariosArray())) {
-                            throw new ConnectorException('Erro ao atualizar usuário na tabela base: ' . $stmt->errorInfo());
-                        }
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($usuario->getUsuariosArray())) {
+                        throw ConnectorException::fromStmt($stmt, 'Erro ao atualizar usuário na tabela base');
                     }
-                    
-                    if ($usuario->hasLocalOAuth()) {
-                        $sql = sprintf('UPDATE %s (id_usuario, email, senha, nome)
+                }
+                
+                if ($usuario->hasLocalOAuth()) {
+                    $sql = sprintf('UPDATE %s
 								SET email=:email,senha=:senha,nome=:nome
+								WHERE id_usuario=:id_usuario', $this->config['user_data']);
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($usuario->getLocalOAuthArray())) {
+                        throw ConnectorException::fromStmt($stmt, 'Erro ao atualizar usuário na tabela de oauth local');
+                    }
+                } else 
+                    if ($usuario->hadLocalOAuth()) {
+                        $sql = sprintf('DROP %s
 								WHERE id_usuario=:id_usuario', $this->config['user_data']);
                         $stmt = $this->db->prepare($sql);
                         if (! $stmt->execute($usuario->getLocalOAuthArray())) {
-                            throw new ConnectorException('Erro ao atualizar usuário na tabela de oauth local: ' . $stmt->errorInfo());
+                            throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário na tabela de oauth local');
                         }
-                    } else 
-                        if ($usuario->deleteLocalOAuth()) {
-                            $sql = sprintf('DROP %s
-								WHERE id_usuario=:id_usuario', $this->config['user_data']);
-                            $stmt = $this->db->prepare($sql);
-                            if (! $stmt->execute($usuario->getLocalOAuthArray())) {
-                                throw new ConnectorException('Erro ao remover usuário na tabela de oauth local: ' . $stmt->errorInfo());
-                            }
-                        }
-                    
-                    if ($usuario->hasFacebookOAuth()) {
-                        $sql = sprintf('UPDATE %s (id_usuario, fb_user_id, fb_email, fb_nome)
+                    }
+                
+                if ($usuario->hasFacebookOAuth()) {
+                    $sql = sprintf('UPDATE %s
 								SET fb_user_id=:fb_user_id,fb_email=:fb_email,fb_nome=:fb_nome
+								WHERE id_usuario=:id_usuario', $this->config['facebook_data']);
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($usuario->getFacebookOAuthArray())) {
+                        throw ConnectorException::fromStmt($stmt, 'Erro ao atualizar usuário na tabela de oauth do facebook');
+                    }
+                } else 
+                    if ($usuario->hadFacebookOAuth()) {
+                        $sql = sprintf('DROP %s
 								WHERE id_usuario=:id_usuario', $this->config['facebook_data']);
                         $stmt = $this->db->prepare($sql);
                         if (! $stmt->execute($usuario->getFacebookOAuthArray())) {
-                            throw new ConnectorException('Erro ao atualizar usuário na tabela de oauth do facebook: ' . $stmt->errorInfo());
+                            throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário na tabela de oauth do facebook');
                         }
-                    } else 
-                        if ($usuario->deleteFacebookOAuth()) {
-                            $sql = sprintf('DROP %s
-								WHERE id_usuario=:id_usuario', $this->config['facebook_data']);
-                            $stmt = $this->db->prepare($sql);
-                            if (! $stmt->execute($usuario->getFacebookOAuthArray())) {
-                                throw new ConnectorException('Erro ao remover usuário na tabela de oauth do facebook: ' . $stmt->errorInfo());
-                            }
-                        }
-                }
-            } else 
-                if (! is_null($usuario->getId())) {
-                    // Caso o usuário deva ser removido
-                    $sql = sprintf('DROP %s WHERE id=:id', $this->config['user_table']);
-                    $stmt = $this->db->prepare($sql);
-                    if (! $stmt->execute($usuario->getUsuariosArray())) {
-                        throw new ConnectorException('Erro ao remover usuário: ' . $stmt->errorInfo());
                     }
+            }
+        } else 
+            if (! is_null($usuario->getId())) {
+                // Caso o usuário deva ser removido
+                $sql = sprintf('DROP %s WHERE id=:id', $this->config['user_table']);
+                $stmt = $this->db->prepare($sql);
+                if (! $stmt->execute($usuario->getUsuariosArray())) {
+                    throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário');
                 }
-            $this->db->commit();
-            return true;
-        } catch (\PDOException $e) {
-            $this->db->rollBack();
-            throw new ConnectorException($e->getMessage(), $e->getCode(), $e);
-            return false;
-        }
+            }
+        $this->db->commit();
     }
 
     /**
@@ -321,7 +326,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
             WHERE %s ORDER BY data DESC', $where);
         $stmt = $this->db->prepare($sql);
         if (! $stmt->execute($array)) {
-            throw new ConnectorException('Falha ao realizar busca de relatos: ' . $stmt->errorInfo());
+            throw ConnectorException::fromStmt($stmt, 'Falha ao realizar busca de relatos');
         }
         
         $resultados = [];
@@ -349,7 +354,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
                     VALUES (:data, :titulo, :descricao, :status, :classificacao, :foto, :latitude, :longitude, :id_usuario)';
                 $stmt = $this->db->prepare($sql);
                 if (! $stmt->execute($relato->toArray())) {
-                    throw new ConnectorException('Falha ao inserir novo relato: ' . $stmt->errorInfo());
+                    throw ConnectorException::fromStmt($stmt, 'Falha ao inserir novo relato');
                 }
             } else {
                 // Caso o relato exista
@@ -358,7 +363,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
                     WHERE id=:id';
                 $stmt = $this->db->prepare($sql);
                 if (! $stmt->execute($relato->toArray())) {
-                    throw new ConnectorException('Falha ao atualizar relato: ' . $stmt->errorInfo());
+                    throw ConnectorException::fromStmt($stmt, 'Falha ao atualizar relato');
                 }
             }
         } catch (ConnectorException $e) {
@@ -370,7 +375,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
 
     /**
      * Busca por comentários no banco de dados.
-     * 
+     *
      * @param int|null $id_relato
      *            ID do relato relacionado ao comentário
      * @param int|null $id_usuario
@@ -398,7 +403,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
             LEFT JOIN comentarios AS c WHERE %s ORDER BY data ASC', $where);
         $stmt = $this->db->prepare($sql);
         if (! $stmt->execute($array)) {
-            throw new ConnectorException('Falha ao realizar busca de comentários: ' . $stmt->errorInfo());
+            throw ConnectorException::fromStmt($stmt, 'Falha ao realizar busca de comentários');
         }
         
         $resultados = [];
@@ -410,7 +415,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
 
     /**
      * Insere um comentário no banco de dados.
-     * 
+     *
      * @param Comentario $comentario
      *            Comentário a ser inserido
      * @throws ConnectorException Caso o comentário não possa ser inserido
@@ -426,7 +431,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
                     VALUES (:texto, :data, :id_relato, :id_usuario)';
                 $stmt = $this->db->prepare($sql);
                 if (! $stmt->execute($comentario->toArray())) {
-                    throw new ConnectorException('Falha ao inserir comentário: ' . $stmt->errorInfo());
+                    throw ConnectorException::fromStmt($stmt, 'Falha ao inserir comentário');
                 }
             } else {
                 // Caso o comentário exista
@@ -435,7 +440,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
                     WHERE id=:id';
                 $stmt = $this->db->prepare($sql);
                 if (! $stmt->execute($comentario->toArray())) {
-                    throw new ConnectorException('Falha ao atualizar comentário: ' . $stmt->errorInfo());
+                    throw ConnectorException::fromStmt($stmt, 'Falha ao atualizar comentário');
                 }
             }
         } catch (ConnectorException $e) {
@@ -473,7 +478,7 @@ EOT;
         $sql = <<<EOT
 CREATE TABLE IF NOT EXISTS {$this->config ['user_table']} (
 	id int NOT NULL AUTO_INCREMENT,
-	admin tinyint NOT NULL DEFAULT 0,
+	admin bool NOT NULL DEFAULT 0,
 	CONSTRAINT pk_{$this->config['user_table']} PRIMARY KEY (id),
 	INDEX ik_admin (admin)
 );
@@ -519,8 +524,8 @@ CREATE TABLE IF NOT EXISTS relatos (
 	data datetime NOT NULL,
 	titulo varchar(50) NOT NULL,
 	descricao varchar(1024) NOT NULL,
-	status enum(\'Pentende\', \'Em Andamento\', \'Finalizado\') NOT NULL,
-	classificacao enum(\'Infraestrutura\', \'Saude\', \'Seguranca\') NOT NULL,
+	status enum('Pentende', 'Em Andamento', 'Finalizado') NOT NULL,
+	classificacao enum('Infraestrutura', 'Saude', 'Seguranca') NOT NULL,
 	foto varchar(1024),
 	latitude double NOT NULL,
 	longitude double NOT NULL,

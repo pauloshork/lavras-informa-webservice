@@ -50,7 +50,7 @@ class Usuario implements \JsonSerializable
      */
     public function isAdmin()
     {
-        return $this->admin;
+        return boolval($this->admin);
     }
 
     /**
@@ -116,7 +116,7 @@ class Usuario implements \JsonSerializable
     public function setAdmin($admin)
     {
         $this->alterado = true;
-        $this->admin = $admin;
+        $this->admin = intval($admin);
     }
 
     public function setEmail($email)
@@ -213,12 +213,24 @@ class Usuario implements \JsonSerializable
         return $u;
     }
 
-    public function getUsuariosArray()
+    protected function select(&$array, $keys = null) {
+        if ($keys != null) {
+            $select = [];
+            foreach ($keys as $k) {
+                $select[$k] = true;
+            }
+            $array = array_intersect_key($array, $select);
+        }
+    }
+    
+    public function getUsuariosArray($keys = null)
     {
         $array = [
             'id' => $this->id,
-            'admin' => $this->admin || false
+            'admin' => intval($this->admin) || 0
         ];
+        
+        $this->select($array, $keys);
         return $array;
     }
 
@@ -239,7 +251,7 @@ class Usuario implements \JsonSerializable
         return $this->local;
     }
 
-    public function getLocalOAuthArray()
+    public function getLocalOAuthArray($keys = null)
     {
         if ($this->hasLocalOAuth()) {
             $array = [
@@ -248,6 +260,7 @@ class Usuario implements \JsonSerializable
                 'senha' => $this->senha,
                 'nome' => $this->nome
             ];
+            $this->select($array, $keys);
             return $array;
         } else {
             return null;
@@ -272,7 +285,7 @@ class Usuario implements \JsonSerializable
         return $this->facebook;
     }
 
-    public function getFacebookOAuthArray()
+    public function getFacebookOAuthArray($keys = null)
     {
         if ($this->hasFacebookOAuth()) {
             $array = [
@@ -281,6 +294,7 @@ class Usuario implements \JsonSerializable
                 'fb_email' => $this->fb_email,
                 'fb_nome' => $this->fb_nome
             ];
+            $this->select($array, $keys);
             return $array;
         } else {
             return null;
