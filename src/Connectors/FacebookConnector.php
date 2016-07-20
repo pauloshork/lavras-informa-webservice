@@ -58,8 +58,8 @@ class FacebookConnector extends BaseConnector
             $metadata->validateUserId($user_id);
             $metadata->validateExpiration();
         } catch (FacebookSDKException $ex) {
-            throw new ConnectorException('FacebookSDKException: ' . $ex->getMessage(), $ex->getCode(), $ex);
 //             echo '<p> Error validating access token: ' . $ex->getMessage () . "</p>\n\n";
+            throw new ConnectorException('FacebookSDKException: ' . $ex->getMessage(), $ex->getCode(), $ex);
             return false;
         }
         
@@ -69,8 +69,8 @@ class FacebookConnector extends BaseConnector
                 $accessToken = $oac->getLongLivedAccessToken($accessToken);
                 $this->fb->setDefaultAccessToken($accessToken);
             } catch (FacebookSDKException $ex) {
-                throw new ConnectorException('FacebookSDKException: ' . $ex->getMessage(), $ex->getCode(), $ex);
 //                 echo '<p>Error getting long-lived access token: ' . $ex->getMessage () . "</p>\n\n";
+                throw new ConnectorException('FacebookSDKException: ' . $ex->getMessage(), $ex->getCode(), $ex);
                 return false;
             }
             

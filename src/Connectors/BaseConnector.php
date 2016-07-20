@@ -277,6 +277,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
                 }
             }
         $this->db->commit();
+        return true;
     }
 
     /**
