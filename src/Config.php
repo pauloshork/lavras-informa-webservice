@@ -3,7 +3,7 @@
 class Config
 {
 
-    public static $config = [
+    const config = [
         'security' => [
             'algo' => PASSWORD_BCRYPT,
             'options' => [
@@ -21,9 +21,19 @@ class Config
             'password' => 'senha_para_lavras_informa',
             'option' => null
         ],
-        'mobile_app' => [
-            'app_id' => 'id_do_aplicativo',
-            'app_secret' => 'segredo_do_aplicativo'
+        'database-test' => [
+            'dsn' => 'mysql:dbname=lavras_informa_test;host=localhost',
+            'username' => 'lavras_informa',
+            'password' => 'senha_para_lavras_informa',
+            'option' => null
+        ],
+        'client_storage' => [
+            'id_do_aplicativo' => [
+                'client_secret' => 'segredo_do_aplicativo',
+                'redirect_url' => '/',
+                'grant_types' => 'password client_credentials',
+                'scope' => 'lista-relatos set-relato lista-comentarios set-comentario'
+            ]
         ]
     ];
 }

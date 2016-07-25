@@ -1,236 +1,94 @@
 <?php
 namespace Models;
 
-class Usuario implements \JsonSerializable
+class Usuario extends AbstractModel
 {
-
-    private $id;
-
-    private $admin;
-
-    private $email;
-
-    private $senha;
-
-    private $nome;
-
-    private $fb_user_id;
-
-    private $fb_email;
-
-    private $fb_nome;
 
     private $local;
 
     private $facebook;
 
-    private $alterado;
-
-    /**
-     *
-     * @return boolean
-     */
-    public function isAlterado()
+    public function __construct(array $data = [])
     {
-        return $this->alterado;
+        $fields = [
+            'id',
+            'admin',
+            'email',
+            'senha',
+            'nome',
+            'fb_user_id',
+            'fb_email',
+            'fb_nome'
+        ];
+        parent::__construct($fields, $data);
     }
 
-    /**
-     *
-     * @return int|null
-     */
-    public function getId()
+    protected function init()
     {
-        return $this->id;
+        $this->local = $this->hasLocalOAuth();
+        $this->facebook = $this->hasFacebookOAuth();
     }
 
-    /**
-     *
-     * @return bool|null
-     */
-    public function isAdmin()
+    public function __get_admin($data)
     {
-        return boolval($this->admin);
+        return boolval($data['admin']);
     }
 
-    /**
-     *
-     * @return string|null
-     */
-    public function getEmail()
+    public function __set_admin($admin)
     {
-        return $this->email;
+        return intval($admin);
     }
 
-    /**
-     *
-     * @return string|null
-     */
-    public function getFbEmail()
+    public function __set_senha($senha)
     {
-        return $this->fb_email;
-    }
-
-    /**
-     *
-     * @return string|null
-     */
-    public function getNome()
-    {
-        return $this->nome;
-    }
-
-    /**
-     *
-     * @return string|null
-     */
-    public function getFbNome()
-    {
-        return $this->fb_nome;
-    }
-
-    /**
-     *
-     * @return string|null
-     */
-    public function getSenha()
-    {
-        return $this->senha;
-    }
-
-    /**
-     *
-     * @return string|null
-     */
-    public function getFbUserId()
-    {
-        return $this->fb_user_id;
-    }
-
-    public function setId($id)
-    {
-        $this->alterado = true;
-        $this->id = $id;
-    }
-
-    public function setAdmin($admin)
-    {
-        $this->alterado = true;
-        $this->admin = intval($admin);
-    }
-
-    public function setEmail($email)
-    {
-        $this->alterado = true;
-        $this->email = $email;
-    }
-
-    public function setFbEmail($fb_email)
-    {
-        $this->alterado = true;
-        $this->fb_email = $fb_email;
-    }
-
-    public function setNome($nome)
-    {
-        $this->alterado = true;
-        $this->nome = $nome;
-    }
-
-    public function setFbNome($fb_nome)
-    {
-        $this->alterado = true;
-        $this->fb_nome = $fb_nome;
-    }
-
-    public function setSenha($senha)
-    {
-        $this->alterado = true;
         if (is_null($senha)) {
-            $this->senha = null;
+            return null;
         } else {
-            $this->senha = password_hash($senha, \Config::$config['security']['algo'], \Config::$config['security']['options']);
+            return password_hash($senha, \Config::config['security']['algo'], \Config::config['security']['options']);
         }
     }
 
-    public function setFbUserId($fb_user_id)
+    public function __get_preferred_email($data)
     {
-        $this->alterado = true;
-        $this->fb_user_id = $fb_user_id;
-    }
-
-    public function getPreferredEmail()
-    {
-        if (is_null($this->getFbEmail())) {
-            return $this->getEmail();
+        if ($this->hasFacebookOAuth()) {
+            return $this->fb_email;
         } else {
-            return $this->getFbEmail();
+            return $this->email;
         }
     }
 
-    public function getPreferredNome()
+    public function __get_preferred_nome($data)
     {
-        if (is_null($this->getFbNome())) {
-            return $this->getNome();
+        if ($this->hasFacebookOAuth()) {
+            return $this->fb_nome;
         } else {
-            return $this->getFbNome();
+            return $this->nome;
         }
     }
 
     /**
-     * Converte o modelo em um objeto JSON seguro para uso com o aplicativo.
+     * Converte o modelo em um array seguro para uso com o aplicativo.
      *
-     * @return string JSON representando o modelo
+     * @return array Representação segura do modelo
      */
-    public function jsonSerialize()
+    public function toSafeArray()
     {
         $array = [
-            'id' => $this->getId(),
-            'email' => $this->getPreferredEmail(),
-            'nome' => $this->getPreferredNome(),
-            'admin' => $this->isAdmin()
+            'id' => $this->id,
+            'email' => $this->preferred_email,
+            'nome' => $this->preferred_nome,
+            'admin' => $this->admin
         ];
         return $array;
     }
 
-    public static function fromArray(array $usuario)
-    {
-        $u = new Usuario();
-        $u->id = $usuario['id'];
-        $u->admin = $usuario['admin'];
-        
-        $u->email = $usuario['email'];
-        $u->senha = $usuario['senha'];
-        $u->nome = $usuario['nome'];
-        
-        $u->fb_user_id = $usuario['fb_user_id'];
-        $u->fb_email = $usuario['fb_nome'];
-        $u->fb_nome = $usuario['fb_nome'];
-        
-        $u->local = $u->hasLocalOAuth();
-        $u->facebook = $u->hasFacebookOAuth();
-        $u->alterado = false;
-        return $u;
-    }
-
-    protected function select(&$array, $keys = null) {
-        if ($keys != null) {
-            $select = [];
-            foreach ($keys as $k) {
-                $select[$k] = true;
-            }
-            $array = array_intersect_key($array, $select);
-        }
-    }
-    
     public function getUsuariosArray($keys = null)
     {
-        $array = [
-            'id' => $this->id,
-            'admin' => intval($this->admin) || 0
-        ];
-        
-        $this->select($array, $keys);
+        $array = $this->toArray([
+            'id',
+            'admin'
+        ]);
+        $this->select_key($array, $keys);
         return $array;
     }
 
@@ -240,7 +98,7 @@ class Usuario implements \JsonSerializable
      */
     public function hasLocalOAuth()
     {
-        return ! is_null($this->email);
+        return isset($this->email) && ! is_null($this->email);
     }
 
     /**
@@ -254,13 +112,13 @@ class Usuario implements \JsonSerializable
     public function getLocalOAuthArray($keys = null)
     {
         if ($this->hasLocalOAuth()) {
-            $array = [
-                'id_usuario' => $this->id,
-                'email' => $this->email,
-                'senha' => $this->senha,
-                'nome' => $this->nome
-            ];
-            $this->select($array, $keys);
+            $array = $this->toArray([
+                'id_usuario',
+                'email',
+                'senha',
+                'nome'
+            ]);
+            $this->select_key($array, $keys);
             return $array;
         } else {
             return null;
@@ -273,7 +131,7 @@ class Usuario implements \JsonSerializable
      */
     public function hasFacebookOAuth()
     {
-        return ! is_null($this->fb_user_id);
+        return isset($this->fb_user_id) && ! is_null($this->fb_user_id);
     }
 
     /**
@@ -288,13 +146,13 @@ class Usuario implements \JsonSerializable
     public function getFacebookOAuthArray($keys = null)
     {
         if ($this->hasFacebookOAuth()) {
-            $array = [
-                'id_usuario' => $this->id,
-                'fb_user_id' => $this->fb_user_id,
-                'fb_email' => $this->fb_email,
-                'fb_nome' => $this->fb_nome
-            ];
-            $this->select($array, $keys);
+            $array = $this->toArray([
+                'id_usuario',
+                'fb_user_id',
+                'fb_email',
+                'fb_nome'
+            ]);
+            $this->select_key($array, $keys);
             return $array;
         } else {
             return null;

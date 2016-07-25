@@ -3,9 +3,6 @@ require_once dirname(__DIR__) . '/src/base.php';
 
 use Connectors\LocalConnector;
 use Connectors\OAuth;
-use Connectors\FacebookConnector;
-use Connectors\ConnectorException;
-use Models\Usuario;
 
 // Mapeamento de caminhos e controladores
 $map = [
@@ -14,7 +11,11 @@ $map = [
     '/cadastro' => 'cadastro',
     '/login' => 'login',
     '/loginFacebook' => 'loginFacebook',
-    '/relatos' => null
+    '/usuario' => 'usuario',
+    '/relatos' => 'relatos',
+    '/relatos/set' => 'set_relato',
+    '/comentarios' => 'comentarios',
+    '/comentarios/set' => 'set_comentario'
 ];
 
 // Leitura do caminho
@@ -62,7 +63,7 @@ function home()
 
 function init()
 {
-    $storage = new LocalConnector(\Config::$config);
+    $storage = new LocalConnector(\Config::config);
     $storage->drop_database();
     $storage->create_database();
 }
@@ -72,39 +73,8 @@ function init()
  */
 function cadastro()
 {
-    $storage = new LocalConnector(\Config::$config);
-
-    $u = new Usuario();
-//     echo $_SERVER['CONTENT_TYPE'];
-    switch ($_SERVER['CONTENT_TYPE']) {
-        case 'application/json':
-            $json = json_decode(file_get_contents('php://input'));
-            $u->setEmail($json->email);
-            $u->setSenha($json->senha);
-            $u->setNome($json->nome);
-            break;
-        case 'application/x-www-form-urlencoded':
-            $u->setEmail($_POST['email']);
-            $u->setSenha($_POST['senha']);
-            $u->setNome($_POST['nome']);
-            break;
-        default:
-            unset($u);
-            echo '{"error":{"message":json ou urlencoded}}';
-    }
-    
-    if (isset($u)) {
-        if (! $storage->getUser($u->getEmail())) {
-            try {
-                $storage->setUser($u);
-            } catch (ConnectorException $e) {
-                echo $e->toJson();
-            }
-        } else {
-            $e = new ConnectorException('O email fornecido já foi cadastrado');
-            echo $e->toJson();
-        }
-    }
+    $auth = new OAuth('local');
+    $auth->cadastroLocal();
 }
 
 /**
@@ -112,9 +82,7 @@ function cadastro()
  */
 function login()
 {
-    $storage = new LocalConnector(\Config::$config);
-    $auth = new OAuth($storage);
-    
+    $auth = new OAuth('local');
     $auth->token();
 }
 
@@ -123,8 +91,43 @@ function login()
  */
 function loginFacebook()
 {
-    $storage = new FacebookConnector(\Config::$config);
-    $auth = new OAuth($storage);
-    
+    $auth = new OAuth('facebook');   
     $auth->token();
+}
+
+function usuario() {
+    $auth = new OAuth();
+    $auth->resource('usuario');
+}
+
+/**
+ * Controlador de busca de relatos no sistema.
+ */
+function relatos() {
+    $auth = new OAuth();
+    $auth->resource('lista_relatos');
+}
+
+/**
+ * Controlador de registro de relatos no sistema.
+ */
+function set_relato() {
+    $auth = new OAuth();
+    $auth->resource('set_relato');
+}
+
+/**
+ * Controlador de busca de comentarios no sistema.
+ */
+function comentarios() {
+    $auth = new OAuth();
+    $auth->resource('lista_comentarios');
+}
+
+/**
+ * Controlador de busca de comentarios no sistema.
+ */
+function set_comentario() {
+    $auth = new OAuth();
+    $auth->resource('set_comentario');
 }

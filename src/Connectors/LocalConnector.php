@@ -34,14 +34,16 @@ class LocalConnector extends BaseConnector
      */
     protected function checkPassword($password, $user)
     {
-        if (! password_verify($password, $user->getSenha())) {
+        if (! password_verify($password, $user->senha)) {
             return false;
-        } else 
-            if (password_needs_rehash($user->getSenha(), $this->config['security']['algo'], $this->config['security']['options'])) {
+        } else {
+            if (password_needs_rehash($user->senha, $this->config['security']['algo'], $this->config['security']['options'])) {
                 $user->setSenha(password_hash($password, $this->config['security']['algo'], $this->config['security']['options']));
-                setUser($user);
+                return setUser($user);
+            } else {
+                return true;
             }
-        return true;
+        }
     }
 
     /**

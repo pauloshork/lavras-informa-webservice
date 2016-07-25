@@ -17,14 +17,13 @@ class ConnectorException extends \Exception
         parent::__construct("{$message}", $code, $previous);
     }
 
-    public function toJson()
-    {
+    public function toArray() {
         $array = [
             'error' => [
                 'code' => $this->getCode(),
                 'message' => $this->getMessage()
             ]
         ];
-        return json_encode($array);
+        return $array;
     }
 }

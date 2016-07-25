@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Teste do Webservice</title>
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+</head>
+<body>
+    <div>
+        <h1>Registrar Usuário</h1>
+        <form id="register-user" action="/lavras-informa/cadastro" method="post">
+            <label>Email</label> <input type="text" name="email" value="oi" /> <br />
+            <label>Senha</label> <input type="text" name="senha" value="oi" /> <br />
+            <label>Nome</label> <input type="text" name="nome" value="oi" /> <br />
+            <input type="submit" value="POST" />
+        </form>
+        <div id="register-user-result"></div>
+	</div>
+	<div>
+        <h1>Login</h1>
+        <form id="login-user" action="/lavras-informa/login" method="post">
+            <label>Grant Type</label><input type="text" name="grant_type" value="password" /> <br />
+            <label>Client ID</label> <input type="text" name="client_id" value="id_do_aplicativo" /> <br />
+            <label>Client Secret</label> <input type="text" name="client_secret" value="segredo_do_aplicativo" /> <br />
+            <label>Scope</label> <input type="text" name="scope" value="usuario lista_relatos set_relato lista_comentarios set_comentario" /> <br />
+            <label>Username</label> <input type="text" name="username" value="oi" /> <br />
+            <label>Password</label> <input type="text" name="password" value="oi" /> <br />
+            <input type="submit" value="POST" />
+        </form>
+        <div id="login-user-result"></div>
+    </div>
+    <div>
+        <h1>Dados do Usuário</h1>
+        <form id="get-user" action="/lavras-informa/usuario" method="post">
+            <label>Access Token</label> <input type="text" name="access_token"> <br />
+            <input type="submit" value="POST" />
+        </form>
+        <div id="get-user-result"></div>
+    </div>
+    <div>
+        <h1>Set Relato</h1>
+        <form id="set-relato" action="/lavras-informa/relatos/set" method="post">
+            <label>Access Token</label> <input type="text" name="access_token" > <br />
+            <label>Titulo</label> <input type="text" name="titulo" value="teste" /> <br />
+            <label>Descrição</label> <input type="text" name="descricao" value="testando 1 2 3"/> <br />
+            <label>Status</label> <select name="status">
+                <option value="pendente" selected>Pendente</option>
+                <option value="em-andamento">Em Andamento</option>
+                <option value="finalizado">Finalizado</option>
+            </select> <br />
+            <label>Classificação</label> <select name="classificacao">
+                <option value="infraestrutura" selected>Infraestrutura</option>
+                <option value="saude">Saúde</option>
+                <option value="seguranca">Segurança</option>
+            </select> <br/>
+            <label>Foto</label> <input type="text" name="foto" value="url da foto"/> <br/>
+            <label>Latitude</label> <input type="number" name="latitude" min="-90" max="90" step="0.0001" value="50"/> <br/>
+            <label>Longitude</label> <input type="number" name="longitude" min="-180" max="180" step="0.0001" value="50"/> <br/>
+            <label>ID Usuário</label> <input type="text" name="id_usuario" />
+            <input type="submit" value="POST" />
+        </form>
+        <div id="set-relato-result"></div>
+    </div>
+    <div>
+        <h1>Lista Relatos</h1>
+        <form id="lista-relatos" action="/lavras-informa/relatos" method="post">
+            <label>Access Token</label> <input type="text" name="access_token"> <br />
+            ...
+            <input type="submit" value="POST" />
+        </form>
+        <div id="lista-relatos-result"></div>
+    </div>
+    <div>
+        <h1>Set Comentario</h1>
+        <form id="set-comentario" action="/lavras-informa/comentarios/set" method="post">
+            <label>Access Token</label> <input type="text" name="access_token"> <br />
+            <label>Texto</label> <input type="text" name="texto" value="testando os comentarios" /> <br />
+            <label>ID Relato</label> <input type="text" name="id_relato" /> <br />
+            <label>ID Usuario</label>  <input type="text" name="id_usuario" /> <br />
+            <input type="submit" value="POST" />
+        </form>
+        <div id="set-comentario-result"></div>
+    </div>
+    <div>
+        <h1>Lista Comentarios</h1>
+        <form id="lista-comentarios" action="/lavras-informa/comentarios" method="post">
+            <label>Access Token</label> <input type="text" name="access_token"> <br />
+            ...
+            <input type="submit" value="POST" />
+        </form>
+        <div id="lista-comentarios-result"></div>
+    </div>
+    
+	<script>
+		function registrarAjax(form_select) {
+			$(form_select).submit(
+					function(event) {
+						event.preventDefault();
+						var form = $(this);
+						var url = form.attr('action');
+						var submit = $.post(url, form.serialize());
+
+						submit.done(function(data) {
+							$(form_select + '-result').html(JSON.stringify(data));
+						});
+						submit.fail(function(xhr, status, error) {
+							// JSON.parse(xhr.responseText)
+							$(form_select + '-result').html(xhr.responseText);
+						});
+					});
+		}
+		
+		registrarAjax('#register-user');
+		registrarAjax('#login-user');
+		registrarAjax('#get-user');
+		registrarAjax('#set-relato');
+		registrarAjax('#lista-relatos');
+		registrarAjax('#set-comentario');
+        registrarAjax('#lista-comentarios');
+	</script>
+
+</body>
+</html>

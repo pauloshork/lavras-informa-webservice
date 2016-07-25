@@ -1,23 +1,18 @@
 <?php
 namespace Models;
 
-class Relato extends AbstractModel
+class BuscaRelato extends AbstractModel
 {
 
     public function __construct(array $data = [])
     {
         $fields = [
-            'id',
-            'data',
             'titulo',
-            'descricao',
+            'autor',
+            'data',
             'status',
             'classificacao',
-            'foto',
-            'latitude',
-            'longitude',
-            'id_usuario',
-            'nome_usuario'
+            'foto'
         ];
         parent::__construct($fields, $data);
     }

@@ -1,18 +1,14 @@
 <?php
 namespace Models;
 
-class Comentario extends AbstractModel
+class BuscaComentario extends AbstractModel
 {
 
     public function __construct(array $data = [])
     {
         $fields = [
-            'id',
-            'texto',
-            'data',
-            'id_usuario',
             'id_relato',
-            'nome_usuario'
+            'id_usuario'
         ];
         parent::__construct($fields, $data);
     }
