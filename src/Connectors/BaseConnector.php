@@ -33,8 +33,8 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
         $this->db = new \PDO($connection['dsn'], $connection['username'], $connection['password'], $connection['options']);
         
         // debugging
-        // $this->db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        
+        //$this->db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            
         $this->config = array_merge([
             'security' => $config['security']
         ], $connection);
@@ -127,10 +127,11 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
         }
     }
 
-    public function getUserById($id_usuario) {
+    public function getUserById($id_usuario)
+    {
         return $this->getUserOn('u.id', $id_usuario);
     }
-    
+
     /**
      * Busca um usuário no banco de dados.
      *
@@ -155,6 +156,9 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
         if ($usuario->hasLocalOAuth() || $usuario->hasFacebookOAuth()) {
             if (is_null($usuario->id)) {
                 // Caso o usuário não exista
+                if (is_null($usuario->admin)) {
+                    $usuario->admin = false;
+                }
                 $sql = sprintf('INSERT INTO %s (admin) VALUES (:admin)', $this->config['user_table']);
                 $stmt = $this->db->prepare($sql);
                 if (! $stmt->execute($usuario->getUsuariosArray([
@@ -190,7 +194,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
                 }
             } else {
                 // Caso o usuário exista
-                if (!is_null($usuario->admin)) {
+                if (! is_null($usuario->admin)) {
                     $sql = sprintf('UPDATE %s
 								SET admin=:admin
 								WHERE id=:id', $this->config['user_table']);
@@ -203,53 +207,72 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
                 if ($usuario->hasLocalOAuth()) {
                     $sql = sprintf('UPDATE %s
 								SET email=:email,senha=:senha,nome=:nome
-								WHERE id_usuario=:id_usuario', $this->config['user_data']);
+								WHERE id_usuario=:id', $this->config['user_data']);
                     $stmt = $this->db->prepare($sql);
                     if (! $stmt->execute($usuario->getLocalOAuthArray())) {
                         throw ConnectorException::fromStmt($stmt, 'Erro ao atualizar usuário na tabela de oauth local');
                     }
-                } else 
-                    if ($usuario->hadLocalOAuth()) {
-                        $sql = sprintf('DROP %s
-								WHERE id_usuario=:id_usuario', $this->config['user_data']);
-                        $stmt = $this->db->prepare($sql);
-                        if (! $stmt->execute($usuario->getLocalOAuthArray())) {
-                            throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário na tabela de oauth local');
-                        }
+                } elseif ($usuario->hadLocalOAuth()) {
+                    $sql = sprintf('DROP %s
+								WHERE id_usuario=:id', $this->config['user_data']);
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($usuario->getLocalOAuthArray())) {
+                        throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário na tabela de oauth local');
                     }
+                }
                 
                 if ($usuario->hasFacebookOAuth()) {
                     $sql = sprintf('UPDATE %s
 								SET fb_user_id=:fb_user_id,fb_email=:fb_email,fb_nome=:fb_nome
-								WHERE id_usuario=:id_usuario', $this->config['facebook_data']);
+								WHERE id_usuario=:id', $this->config['facebook_data']);
                     $stmt = $this->db->prepare($sql);
                     if (! $stmt->execute($usuario->getFacebookOAuthArray())) {
                         throw ConnectorException::fromStmt($stmt, 'Erro ao atualizar usuário na tabela de oauth do facebook');
                     }
-                } else 
-                    if ($usuario->hadFacebookOAuth()) {
-                        $sql = sprintf('DROP %s
-								WHERE id_usuario=:id_usuario', $this->config['facebook_data']);
-                        $stmt = $this->db->prepare($sql);
-                        if (! $stmt->execute($usuario->getFacebookOAuthArray())) {
-                            throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário na tabela de oauth do facebook');
-                        }
+                } elseif ($usuario->hadFacebookOAuth()) {
+                    $sql = sprintf('DROP %s
+								WHERE id_usuario=:id', $this->config['facebook_data']);
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($usuario->getFacebookOAuthArray())) {
+                        throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário na tabela de oauth do facebook');
                     }
-            }
-        } else {
-            if (!is_null($usuario->id)) {
-                // Caso o usuário deva ser removido
-                $sql = sprintf('DROP %s WHERE id=:id', $this->config['user_table']);
-                $stmt = $this->db->prepare($sql);
-                if (! $stmt->execute($usuario->getUsuariosArray())) {
-                    throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário');
                 }
+            }
+        } elseif (! is_null($usuario->id)) {
+            // Caso o usuário deva ser removido
+            $sql = sprintf('DROP %s WHERE id=:id', $this->config['user_table']);
+            $stmt = $this->db->prepare($sql);
+            if (! $stmt->execute($usuario->getUsuariosArray())) {
+                throw ConnectorException::fromStmt($stmt, 'Erro ao remover usuário');
             }
         }
         $this->db->commit();
         return true;
     }
 
+    public function getRelatoById($id) {
+        $sql = sprintf('SELECT
+            COALESCE(f.fb_nome, l.nome) AS nome_usuario,
+            p.id AS id, p.titulo AS titulo, p.descricao AS descricao,
+            p.data AS data, p.status AS status, p.classificacao AS classificacao,
+            p.foto AS foto, p.latitude AS latitude, p.longitude AS longitude,
+            p.id_usuario AS id_usuario
+            FROM ' . $this->config['user_table'] . ' AS u
+            LEFT JOIN ' . $this->config['user_data'] . ' AS l ON u.id = l.id_usuario
+            LEFT JOIN ' . $this->config['facebook_data'] . ' AS f ON u.id = f.id_usuario
+            RIGHT JOIN relatos AS p ON u.id = p.id_usuario
+            WHERE p.id=:id');
+        $stmt = $this->db->prepare($sql);
+        if (! $stmt->execute(compact('id'))) {
+            throw ConnectorException::fromStmt($stmt, 'Falha ao realizar busca de relatos');
+        }
+        if ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            return new Relato($row);
+        } else {
+            return null;
+        }
+    }
+    
     /**
      * Lista um conjunto de relatos que satisfazem os requisitos da busca.
      *
@@ -261,17 +284,13 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
     {
         $where = [];
         if (! is_null($busca->titulo)) {
-            $where[] = 'titulo LIKE %:titulo%';
+            $where[] = 'titulo LIKE CONCAT(\'%\', :titulo, \'%\')';
         }
         if (! is_null($busca->autor)) {
             $where[] = 'nome_usuario LIKE %:autor%';
         }
         if (! is_null($busca->foto)) {
-            if ($array['foto']) {
-                $where[] = 'foto IS NOT NULL';
-            } else {
-                $where[] = 'foto IS NULL';
-            }
+            $where[] = 'foto = :foto';
         }
         if (! is_null($busca->status)) {
             $where[] = 'status = :status';
@@ -282,7 +301,10 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
         if (! is_null($busca->data)) {
             $where[] = 'data = :data + INTERVAL 1 DAY';
         }
-        if (!empty($where)) {
+        if (! is_null($busca->id_usuario)) {
+            $where[] = 'u.id = :id_usuario';
+        }
+        if (! empty($where)) {
             $where = 'WHERE ' . implode(' AND ', $where);
         } else {
             $where = '';
@@ -299,7 +321,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
             RIGHT JOIN relatos AS p ON u.id = p.id_usuario
             %s ORDER BY data DESC', $where);
         $stmt = $this->db->prepare($sql);
-        if (! $stmt->execute($busca->toArray())) {
+        if (! $stmt->execute($busca->toArray(null, false))) {
             throw ConnectorException::fromStmt($stmt, 'Falha ao realizar busca de relatos');
         }
         
@@ -309,7 +331,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
         }
         return $resultados;
     }
-
+    
     /**
      * Insere dado de um relato no banco de dados.
      *
@@ -318,32 +340,47 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
      * @throws ConnectorException Caso o relato não possa ser inserido
      * @return boolean Se o relato foi inserido ou não
      */
-    public function setRelato(Relato $relato)
+    public function setRelato(Relato &$relato)
     {
         try {
             if (is_null($relato->id)) {
-                $relato->data = date(BaseConnector::DATE_FORMAT);
                 // Caso o relato não exista
+                $relato->data = date(BaseConnector::DATE_FORMAT);
                 $sql = 'INSERT INTO relatos(data, titulo, descricao, status, classificacao, foto, latitude, longitude, id_usuario)
                     VALUES (:data, :titulo, :descricao, :status, :classificacao, :foto, :latitude, :longitude, :id_usuario)';
                 $stmt = $this->db->prepare($sql);
-                if (! $stmt->execute($relato->toArray(['data', 'titulo', 'descricao', 'status', 'classificacao', 'foto', 'latitude', 'longitude', 'id_usuario']))) {
+                if (! $stmt->execute($relato->toArray(['data', 'titulo', 'descricao', 'status', 'classificacao', 'foto', 'latitude', 'longitude', 'id_usuario' ]))) {
                     throw ConnectorException::fromStmt($stmt, 'Falha ao inserir novo relato');
                 }
+                $sql = 'SELECT LAST_INSERT_ID() AS id';
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute();
+                $relato->id = $stmt->fetchColumn();
             } else {
                 // Caso o relato exista
-                $sql = 'UPDATE relatos 
-                    SET data=:data,titulo=:titulo,descricao=:descricao,status=:status,classificacao=:classificacao,foto=:foto,latitude=:latitude,longitude=:longitude,id_usuario=:id_usuario
-                    WHERE id=:id';
-                $stmt = $this->db->prepare($sql);
-                if (! $stmt->execute($relato->toArray())) {
-                    throw ConnectorException::fromStmt($stmt, 'Falha ao atualizar relato');
+                if (!is_null($relato->titulo)) {
+                    // Relato deve ser atualizado
+                    $sql = 'UPDATE relatos 
+                        SET data=:data,titulo=:titulo,descricao=:descricao,status=:status,classificacao=:classificacao,foto=:foto,latitude=:latitude,longitude=:longitude,id_usuario=:id_usuario
+                        WHERE id=:id';
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($relato->toArray(['id', 'data', 'titulo', 'descricao', 'status', 'classificacao', 'foto', 'latitude', 'longitude', 'id_usuario']))) {
+                        throw ConnectorException::fromStmt($stmt, 'Falha ao atualizar relato');
+                    }
+                } else {
+                    // Relato deve ser removido
+                    $sql = 'DELETE FROM relatos WHERE id=:id';
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($relato->toArray(['id']))) {
+                        throw ConnectorException::fromStmt($stmt, 'Falha ao remover relato');
+                    }
                 }
             }
         } catch (ConnectorException $e) {
             throw $e;
             return false;
         }
+        $relato->clearDirty();
         return true;
     }
 
@@ -362,9 +399,9 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
             $where[] = 'id_relato = :id_relato';
         }
         if (! is_null($busca->id_usuario)) {
-            $where[] = 'id_usuario = :id_usuario';
+            $where[] = 'u.id = :id_usuario';
         }
-        if (!empty($where)) {
+        if (! empty($where)) {
             $where = 'WHERE ' . implode(' AND ', $where);
         } else {
             $where = '';
@@ -379,7 +416,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
             RIGHT JOIN comentarios AS c ON u.id = c.id_usuario
             %s ORDER BY data DESC', $where);
         $stmt = $this->db->prepare($sql);
-        if (! $stmt->execute($busca->toArray())) {
+        if (! $stmt->execute($busca->toArray(null, false))) {
             throw ConnectorException::fromStmt($stmt, 'Falha ao realizar busca de comentários');
         }
         
@@ -398,32 +435,52 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
      * @throws ConnectorException Caso o comentário não possa ser inserido
      * @return boolean Se o comentário foi inserido ou não
      */
-    public function setComentario(Comentario $comentario)
+    public function setComentario(Comentario &$comentario)
     {
         try {
             if (is_null($comentario->id)) {
-                $comentario->data = date(BaseConnector::DATE_FORMAT);
                 // Caso o comentário não exista
+                $comentario->data = date(BaseConnector::DATE_FORMAT);
                 $sql = 'INSERT INTO comentarios(texto, data, id_relato, id_usuario)
                     VALUES (:texto, :data, :id_relato, :id_usuario)';
                 $stmt = $this->db->prepare($sql);
-                if (! $stmt->execute($comentario->toArray(['texto', 'data', 'id_relato', 'id_usuario']))) {
+                if (! $stmt->execute($comentario->toArray([
+                    'texto',
+                    'data',
+                    'id_relato',
+                    'id_usuario'
+                ]))) {
                     throw ConnectorException::fromStmt($stmt, 'Falha ao inserir comentário');
                 }
+                $sql = 'SELECT LAST_INSERT_ID() AS id';
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute();
+                $comentario->id = $stmt->fetchColumn();
             } else {
                 // Caso o comentário exista
-                $sql = 'UPDATE comentarios
-                    SET texto=:texto, data=:data, id_usuario=:id_usuario, id_relato=:id_relato
-                    WHERE id=:id';
-                $stmt = $this->db->prepare($sql);
-                if (! $stmt->execute($comentario->toArray())) {
-                    throw ConnectorException::fromStmt($stmt, 'Falha ao atualizar comentário');
+                if (! is_null($comentario->texto)) {
+                    // O comentário deve ser atualizado
+                    $sql = 'UPDATE comentarios
+                        SET texto=:texto, data=:data, id_usuario=:id_usuario, id_relato=:id_relato
+                        WHERE id=:id';
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($comentario->toArray())) {
+                        throw ConnectorException::fromStmt($stmt, 'Falha ao atualizar comentário');
+                    }
+                } else {
+                    // O comentário deve ser removido
+                    $sql = 'DELETE FROM comentarios WHERE id=:id';
+                    $stmt = $this->db->prepare($sql);
+                    if (! $stmt->execute($comentario->toArray(['id']))) {
+                        throw ConnectorException::fromStmt($stmt, 'Falha ao remover comentário');
+                    }
                 }
             }
         } catch (ConnectorException $e) {
             throw $e;
             return false;
         }
+        $comentario->clearDirty();
         return true;
     }
 
@@ -433,7 +490,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
         foreach ($queries as $query) {
             echo $query . '<br>';
             $stmt = $this->db->prepare($query);
-            if (!$stmt->execute()) {
+            if (! $stmt->execute()) {
                 throw ConnectorException::fromStmt($stmt, 'Falha ao executar múltiplas queries');
             }
         }
@@ -442,6 +499,7 @@ abstract class BaseConnector implements AccessTokenInterface, UserCredentialsInt
     public function drop_database()
     {
         $sql = <<<EOT
+DROP EVENT IF EXISTS remove_expired_tokens;
 DROP TABLE IF EXISTS comentarios;
 DROP TABLE IF EXISTS relatos;
 DROP TABLE IF EXISTS {$this->config ['access_token_table']};
@@ -505,7 +563,7 @@ CREATE TABLE IF NOT EXISTS relatos (
 	descricao varchar(1024) NOT NULL,
 	status enum('pendente', 'em-andamento', 'finalizado') NOT NULL,
 	classificacao enum('infraestrutura', 'saude', 'seguranca') NOT NULL,
-	foto varchar(1024),
+	foto bool NOT NULL,
 	latitude double NOT NULL,
 	longitude double NOT NULL,
 	id_usuario int NOT NULL,

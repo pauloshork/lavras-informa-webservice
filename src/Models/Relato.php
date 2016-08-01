@@ -21,4 +21,12 @@ class Relato extends AbstractModel
         ];
         parent::__construct($fields, $data);
     }
+    
+    protected function __get_foto(array $data) {
+        return isset($data['foto']) && boolval($data['foto']);
+    }
+    
+    protected function __set_foto($foto) {
+        return intval($foto);
+    }
 }

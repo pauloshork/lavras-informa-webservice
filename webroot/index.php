@@ -15,7 +15,8 @@ $map = [
     '/relatos' => 'relatos',
     '/relatos/set' => 'set_relato',
     '/comentarios' => 'comentarios',
-    '/comentarios/set' => 'set_comentario'
+    '/comentarios/set' => 'set_comentario',
+    '/imagem' => 'imagem'
 ];
 
 // Leitura do caminho
@@ -97,7 +98,7 @@ function loginFacebook()
 
 function usuario() {
     $auth = new OAuth();
-    $auth->resource('usuario');
+    $auth->usuario();
 }
 
 /**
@@ -105,7 +106,7 @@ function usuario() {
  */
 function relatos() {
     $auth = new OAuth();
-    $auth->resource('lista_relatos');
+    $auth->lista_relatos();
 }
 
 /**
@@ -113,7 +114,7 @@ function relatos() {
  */
 function set_relato() {
     $auth = new OAuth();
-    $auth->resource('set_relato');
+    $auth->set_relato();
 }
 
 /**
@@ -121,7 +122,7 @@ function set_relato() {
  */
 function comentarios() {
     $auth = new OAuth();
-    $auth->resource('lista_comentarios');
+    $auth->lista_comentarios();
 }
 
 /**
@@ -129,5 +130,10 @@ function comentarios() {
  */
 function set_comentario() {
     $auth = new OAuth();
-    $auth->resource('set_comentario');
+    $auth->set_comentario();
+}
+
+function imagem() {
+    $auth = new OAuth();
+    $auth->get_foto();
 }

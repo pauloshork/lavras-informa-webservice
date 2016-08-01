@@ -28,11 +28,11 @@ class FacebookConnector extends BaseConnector
             $user = $this->getUser($username);
             if (! $user) {
                 $user = new Usuario();
-                $user->setFbUserId($username);
+                $user->fb_user_id = $username;
             }
             $fb_user = $this->fetchUserData();
-            $user->setFbEmail($fb_user->getEmail());
-            $user->setFbNome($fb_user->getName());
+            $user->fb_email = $fb_user->getEmail();
+            $user->fb_nome = $fb_user->getName();
             
             return $this->setUser($user);
         } else {

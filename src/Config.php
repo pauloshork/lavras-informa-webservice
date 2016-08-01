@@ -21,12 +21,7 @@ class Config
             'password' => 'senha_para_lavras_informa',
             'option' => null
         ],
-        'database-test' => [
-            'dsn' => 'mysql:dbname=lavras_informa_test;host=localhost',
-            'username' => 'lavras_informa',
-            'password' => 'senha_para_lavras_informa',
-            'option' => null
-        ],
+        'upload-dir' => '/imagens',
         'client_storage' => [
             'id_do_aplicativo' => [
                 'client_secret' => 'segredo_do_aplicativo',

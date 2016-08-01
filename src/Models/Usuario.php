@@ -31,7 +31,11 @@ class Usuario extends AbstractModel
 
     public function __get_admin($data)
     {
-        return boolval($data['admin']);
+        if (isset($data['admin'])) {
+            return boolval($data['admin']);
+        } else {
+            return null;
+        }
     }
 
     public function __set_admin($admin)
@@ -113,7 +117,7 @@ class Usuario extends AbstractModel
     {
         if ($this->hasLocalOAuth()) {
             $array = $this->toArray([
-                'id_usuario',
+                'id',
                 'email',
                 'senha',
                 'nome'
@@ -147,7 +151,7 @@ class Usuario extends AbstractModel
     {
         if ($this->hasFacebookOAuth()) {
             $array = $this->toArray([
-                'id_usuario',
+                'id',
                 'fb_user_id',
                 'fb_email',
                 'fb_nome'

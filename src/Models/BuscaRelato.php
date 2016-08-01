@@ -12,7 +12,8 @@ class BuscaRelato extends AbstractModel
             'data',
             'status',
             'classificacao',
-            'foto'
+            'foto',
+            'id_usuario'
         ];
         parent::__construct($fields, $data);
     }

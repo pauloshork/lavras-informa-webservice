@@ -144,9 +144,16 @@ abstract class AbstractModel implements \JsonSerializable
         $this->dirty = [];
     }
 
-    public function toArray(array $filter = null)
+    public function toArray(array $filter = null, $include_nulls = true)
     {
         $array = $this->data;
+        if (!$include_nulls) {
+            foreach ($array as $k => $v) {
+                if (is_null($v)) {
+                    unset($array[$k]);
+                }
+            }
+        }
         $this->select_key($array, $filter);
         return $array;
     }
